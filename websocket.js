@@ -2,23 +2,52 @@ import {WebSocketServer} from "ws";
 
 export function attachWebSocket(server) {
     const wss = new WebSocketServer({server});
-    const clients = new Set();
+    const clients = new Map();
 
     wss.on("connection", (ws) => {
-        clients.add(ws);
-        ws.on("close", () => clients.delete(ws));
+        let userId = null;
 
         ws.on("message", (raw) => {
             try {
                 const msg = JSON.parse(raw.toString());
-                for (const c of clients) {
-                    if (c !== ws && c.readyState === 1) {
-                        c.send(JSON.stringify(msg));
+
+                if (msg.type === "identify") {
+                    userId = msg.userId;
+                    clients.set(userId, ws);
+                    console.log(`${userId} connected`);
+                    return;
+                }
+
+                if (msg.type === "message") {
+                    for (const [uid, client] of clients) {
+                        if (uid !== msg.message.senderId && client.readyState === 1) {
+                            client.send(JSON.stringify({type: "message", message: msg.message}));
+                        }
+                    }
+                }
+
+                if (msg.type === "delivered") {
+                    const receiver = msg.to;
+                    const target = clients.get(receiver);
+                    if (target?.readyState === 1) {
+                        target.send(JSON.stringify({type: "delivered", messageId: msg.messageId }));
+                    }
+                }
+
+                if (msg.type === "read") {
+                    const receiver = msg.to;
+                    const target = clients.get(receiver);
+                    if (target?.readyState === 1) {
+                        target.send(JSON.stringify({type: "read", messageId: msg.messageId }));
                     }
                 }
             } catch (err) {
                 console.error("WebSocket parse error", err);
             }
+        });
+
+        ws.on("close", () => {
+            if (userId) clients.delete(userId);
         });
     });
 
