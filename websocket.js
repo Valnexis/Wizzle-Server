@@ -1,9 +1,9 @@
 import {WebSocketServer} from "ws";
 
+export const clients = new Map();
+
 export function attachWebSocket(server) {
     const wss = new WebSocketServer({server});
-    const clients = new Map();
-
     wss.on("connection", (ws) => {
         let userId = null;
 
@@ -21,7 +21,10 @@ export function attachWebSocket(server) {
                 if (msg.type === "message") {
                     for (const [uid, client] of clients) {
                         if (uid !== msg.message.senderId && client.readyState === 1) {
-                            client.send(JSON.stringify({type: "message", message: msg.message}));
+                            client.send(JSON.stringify({
+                                type: "message",
+                                message: msg.message
+                            }));
                         }
                     }
                 }
@@ -30,7 +33,10 @@ export function attachWebSocket(server) {
                     const receiver = msg.to;
                     const target = clients.get(receiver);
                     if (target?.readyState === 1) {
-                        target.send(JSON.stringify({type: "delivered", messageId: msg.messageId }));
+                        target.send(JSON.stringify({
+                            type: "delivered",
+                            messageId: msg.messageId
+                        }));
                     }
                 }
 
@@ -38,7 +44,10 @@ export function attachWebSocket(server) {
                     const receiver = msg.to;
                     const target = clients.get(receiver);
                     if (target?.readyState === 1) {
-                        target.send(JSON.stringify({type: "read", messageId: msg.messageId }));
+                        target.send(JSON.stringify({
+                            type: "read",
+                            messageId: msg.messageId
+                        }));
                     }
                 }
             } catch (err) {

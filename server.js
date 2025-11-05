@@ -1,3 +1,4 @@
+import { db } from "./db.js";
 import http from 'http';
 import express from 'express'
 import cors from 'cors'
