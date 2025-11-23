@@ -13,12 +13,17 @@ router.post("/:conversationId", (req, res) => {
         return res.status(400).json({ error: "Missing senderId or content" });
     }
 
+    const kind = {
+        type: "text",
+        value: content
+    };
+
     const msg = {
         id: crypto.randomUUID(),
         conversationId,
         senderId,
         sentAt: new Date().toISOString(),
-        kind: JSON.stringify({type: "text", value: content }),
+        kind: JSON.stringify(kind),
         status: "sent",
     };
 
@@ -77,6 +82,20 @@ router.get("/:conversationId", (req, res) => {
     }));
 
     res.json(messages);
+});
+
+router.delete("/:id", (req, res) => {
+    const { id } = req.params;
+
+    let deleted = false;
+
+    // Remove message from database
+    db.prepare("DELETE FROM messages WHERE id = ?").run(id);
+
+    // Confirm deletion
+    deleted = true;
+
+    res.json({ success: deleted });
 });
 
 export default router;

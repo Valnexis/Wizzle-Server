@@ -1,4 +1,5 @@
 import {WebSocketServer} from "ws";
+import { db } from "./db.js";
 
 export const clients = new Map();
 
@@ -48,6 +49,23 @@ export function attachWebSocket(server) {
                             type: "read",
                             messageId: msg.messageId
                         }));
+                    }
+                }
+
+                if (msg.type === "delete_message") {
+                    const messageId = msg.messageId;
+
+                    // Remove from DB too
+                    db.prepare("DELETE FROM messages WHERE id = ?").run(messageId);
+
+                    // Broadcast to everyone in that conversation
+                    for (const [uid, ws] of clients.entries()) {
+                        if (ws.readyState === 1) {
+                            ws.send(JSON.stringify({
+                                type: "delete_message",
+                                messageId
+                            }));
+                        }
                     }
                 }
             } catch (err) {
